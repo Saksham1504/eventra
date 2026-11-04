@@ -1,0 +1,34 @@
+
+# =====================================
+# EVENTRA - BACKEND DEPENDENCIES
+# =====================================
+
+# Backend framework
+fastapi
+uvicorn[standard]
+
+# Database and ORM
+sqlalchemy>=2.0
+pymysql
+alembic
+
+# Configuration and environment variables
+pydantic-settings
+python-dotenv
+
+# Authentication
+firebase-admin
+
+# QR ticket generation
+qrcode[pil]
+pillow
+
+# File uploads and validation
+python-multipart
+email-validator
+
+# HTTP requests
+httpx
+
+# Testing
+pytest
