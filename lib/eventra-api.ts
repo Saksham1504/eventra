@@ -12,6 +12,27 @@ const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:80
   '',
 )
 
+function isEventraUser(value: unknown): value is EventraUser {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  return (
+    'id' in value &&
+    typeof value.id === 'string' &&
+    'name' in value &&
+    typeof value.name === 'string' &&
+    'email' in value &&
+    typeof value.email === 'string' &&
+    'avatar_url' in value &&
+    (value.avatar_url === null || typeof value.avatar_url === 'string') &&
+    'role' in value &&
+    (value.role === 'STUDENT' || value.role === 'ORGANIZER' || value.role === 'ADMIN') &&
+    'college_id' in value &&
+    (value.college_id === null || typeof value.college_id === 'string')
+  )
+}
+
 export async function loginToEventra(idToken: string): Promise<EventraUser> {
   const response = await fetch(`${apiBaseUrl}/auth/login`, {
     method: 'POST',
@@ -39,5 +60,9 @@ export async function loginToEventra(idToken: string): Promise<EventraUser> {
     throw new Error(detail)
   }
 
-  return result as EventraUser
+  if (!isEventraUser(result)) {
+    throw new Error('Eventra API returned an unexpected user response.')
+  }
+
+  return result
 }

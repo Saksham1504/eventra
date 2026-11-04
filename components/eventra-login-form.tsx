@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, type FormEvent } from 'react'
-import { ArrowRight, Eye, EyeOff, Info } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, Info, LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -12,10 +12,19 @@ import {
   FieldSeparator,
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import {
+  getEventraAuthErrorMessage,
+  sendEventraPasswordReset,
+  signInWithEventraEmail,
+  signInWithEventraGoogle,
+} from '@/lib/eventra-auth'
 
 type Feedback = {
   message: string
+  tone?: 'error' | 'success'
 } | null
+
+type ActiveAction = 'email' | 'google' | 'reset' | null
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -27,8 +36,9 @@ export function EventraLoginForm() {
   const [emailError, setEmailError] = useState('')
   const [passwordError, setPasswordError] = useState('')
   const [feedback, setFeedback] = useState<Feedback>(null)
+  const [activeAction, setActiveAction] = useState<ActiveAction>(null)
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     const normalizedEmail = email.trim()
@@ -47,13 +57,47 @@ export function EventraLoginForm() {
       return
     }
 
-    setFeedback({
-      message: 'Your details look good. Connect Eventra authentication to finish signing in.',
-    })
+    setActiveAction('email')
+    try {
+      const user = await signInWithEventraEmail(normalizedEmail, password, rememberMe)
+      setFeedback({ message: `Welcome back, ${user.name}.`, tone: 'success' })
+    } catch (error) {
+      setFeedback({ message: getEventraAuthErrorMessage(error), tone: 'error' })
+    } finally {
+      setActiveAction(null)
+    }
   }
 
-  const showProviderMessage = (message: string) => {
-    setFeedback({ message })
+  const handleGoogleSignIn = async () => {
+    setActiveAction('google')
+    try {
+      const user = await signInWithEventraGoogle(rememberMe)
+      setFeedback({ message: `Welcome back, ${user.name}.`, tone: 'success' })
+    } catch (error) {
+      setFeedback({ message: getEventraAuthErrorMessage(error), tone: 'error' })
+    } finally {
+      setActiveAction(null)
+    }
+  }
+
+  const handlePasswordReset = async () => {
+    const normalizedEmail = email.trim()
+    if (!emailPattern.test(normalizedEmail)) {
+      setEmailError('Enter a valid email address first.')
+      setFeedback(null)
+      return
+    }
+
+    setEmailError('')
+    setActiveAction('reset')
+    try {
+      await sendEventraPasswordReset(normalizedEmail)
+      setFeedback({ message: 'Password reset instructions have been sent to your email.', tone: 'success' })
+    } catch (error) {
+      setFeedback({ message: getEventraAuthErrorMessage(error), tone: 'error' })
+    } finally {
+      setActiveAction(null)
+    }
   }
 
   return (
@@ -70,6 +114,7 @@ export function EventraLoginForm() {
             autoComplete="username"
             inputMode="email"
             required
+            disabled={activeAction !== null}
             placeholder="you@university.edu"
             value={email}
             aria-invalid={Boolean(emailError)}
@@ -91,12 +136,11 @@ export function EventraLoginForm() {
             </FieldLabel>
             <button
               type="button"
+              disabled={activeAction !== null}
               className="rounded-sm text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              onClick={() =>
-                showProviderMessage('Password recovery is available once email authentication is connected.')
-              }
+              onClick={() => void handlePasswordReset()}
             >
-              Forgot password?
+              {activeAction === 'reset' ? 'Sending...' : 'Forgot password?'}
             </button>
           </div>
           <div className="relative">
@@ -106,6 +150,7 @@ export function EventraLoginForm() {
               type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               required
+              disabled={activeAction !== null}
               placeholder="Enter your password"
               value={password}
               aria-invalid={Boolean(passwordError)}
@@ -140,6 +185,7 @@ export function EventraLoginForm() {
         <Checkbox
           id="eventra-remember"
           checked={rememberMe}
+          disabled={activeAction !== null}
           onCheckedChange={(checked) => setRememberMe(checked === true)}
         />
         <FieldLabel
@@ -152,10 +198,15 @@ export function EventraLoginForm() {
 
       <Button
         type="submit"
+        disabled={activeAction !== null}
         className="h-12 w-full justify-between rounded-xl px-4 text-sm font-semibold shadow-[0_12px_22px_-15px_rgba(38,58,115,0.65)] transition-transform hover:-translate-y-0.5"
       >
-        Sign in to Eventra
-        <ArrowRight data-icon="inline-end" aria-hidden="true" />
+        {activeAction === 'email' ? 'Signing in...' : 'Sign in to Eventra'}
+        {activeAction === 'email' ? (
+          <LoaderCircle data-icon="inline-end" className="animate-spin" aria-hidden="true" />
+        ) : (
+          <ArrowRight data-icon="inline-end" aria-hidden="true" />
+        )}
       </Button>
 
       <FieldSeparator className="my-0 text-xs uppercase tracking-[0.16em] text-muted-foreground/80">
@@ -165,22 +216,31 @@ export function EventraLoginForm() {
       <Button
         type="button"
         variant="outline"
+        disabled={activeAction !== null}
         className="h-12 w-full rounded-xl border-border/80 bg-white font-medium text-foreground shadow-none hover:bg-white"
-        onClick={() =>
-          showProviderMessage('Google sign-in will work once Eventra authentication is connected.')
-        }
+        onClick={() => void handleGoogleSignIn()}
       >
-        <span
-          aria-hidden="true"
-          className="mr-1 grid size-5 place-items-center rounded-full border border-border text-[13px] font-bold text-[#4285f4]"
-        >
-          G
-        </span>
-        Continue with Google
+        {activeAction === 'google' ? (
+          <LoaderCircle className="mr-1 size-4 animate-spin" aria-hidden="true" />
+        ) : (
+          <span
+            aria-hidden="true"
+            className="mr-1 grid size-5 place-items-center rounded-full border border-border text-[13px] font-bold text-[#4285f4]"
+          >
+            G
+          </span>
+        )}
+        {activeAction === 'google' ? 'Connecting...' : 'Continue with Google'}
       </Button>
 
       {feedback && (
-        <p role="status" aria-live="polite" className="flex items-start gap-2 text-sm leading-5 text-muted-foreground">
+        <p
+          role={feedback.tone === 'error' ? 'alert' : 'status'}
+          aria-live={feedback.tone === 'error' ? 'assertive' : 'polite'}
+          className={`flex items-start gap-2 text-sm leading-5 ${
+            feedback.tone === 'error' ? 'text-destructive' : 'text-muted-foreground'
+          }`}
+        >
           <Info className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
           <span>{feedback.message}</span>
         </p>

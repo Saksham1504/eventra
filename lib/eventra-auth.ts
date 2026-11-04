@@ -12,7 +12,10 @@ import {
 import { loginToEventra, type EventraUser } from '@/lib/eventra-api'
 import { getFirebaseAuth } from '@/lib/firebase'
 
-async function finishSignIn(user: User, auth: ReturnType<typeof getFirebaseAuth>): Promise<EventraUser> {
+async function finishSignIn(
+  user: User,
+  auth: ReturnType<typeof getFirebaseAuth>,
+): Promise<EventraUser> {
   try {
     return await loginToEventra(await user.getIdToken())
   } catch (error) {
