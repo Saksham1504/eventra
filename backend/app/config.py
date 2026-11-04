@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     app_name: str = "Eventra API"
     database_url: str
     firebase_credentials_path: str = "./firebase-service-account.json"
-    cors_origins: str = "http://localhost:5173"
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     admin_emails: str = ""
     allowed_email_domains: str = ""
 
