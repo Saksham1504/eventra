@@ -3,7 +3,8 @@
 A full-stack web application for discovering, booking, and managing campus events with dynamic pricing, real-time WebSocket updates, QR check-in, and an organizer dashboard.
 
 ---
-![Uploading image.png…]()
+<img width="1887" height="977" alt="image" src="https://github.com/user-attachments/assets/9650f062-f7a2-4985-94a2-c9aea91753aa" />
+
 
 ## Tech Stack
 
