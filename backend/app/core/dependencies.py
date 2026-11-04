@@ -39,6 +39,20 @@ def get_current_user(claims: TokenClaims, db: DbSession) -> User:
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
+def get_optional_user(
+    creds: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+    db: DbSession,
+) -> User | None:
+    """For public endpoints that show a bit more to a logged-in owner (e.g. draft events)."""
+    if creds is None:
+        return None
+    claims = verify_firebase_token(creds.credentials)
+    return db.scalar(select(User).where(User.google_uid == claims["uid"]))
+
+
+OptionalUser = Annotated[User | None, Depends(get_optional_user)]
+
+
 def require_roles(*roles: UserRole):
     """Dependency factory: allow only the given roles."""
 

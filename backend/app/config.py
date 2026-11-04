@@ -7,11 +7,23 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     app_name: str = "Eventra API"
-    database_url: str
+    database_url: str = "sqlite:///./eventra_dev.db"
     firebase_credentials_path: str = "./firebase-service-account.json"
-    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
-    admin_emails: str = ""
+    cors_origins: str = "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000"
+    admin_emails: str = "admin@eventra.local,you@example.com"
     allowed_email_domains: str = ""
+
+    qr_secret: str = "dev-only-secret-change-me-long-random-string-12345"
+    reservation_minutes: int = 10
+    max_tickets_per_booking: int = 4
+    cancel_before_hours: int = 24
+    payment_mode: str = "mock"
+    expiry_job_interval_seconds: int = 60
+    dev_mock_auth: bool = True
+
+    razorpay_key_id: str = ""
+    razorpay_key_secret: str = ""
+    razorpay_webhook_secret: str = ""
 
     @staticmethod
     def _split(value: str) -> list[str]:
@@ -19,7 +31,6 @@ class Settings(BaseSettings):
 
     @property
     def cors_origin_list(self) -> list[str]:
-        # origins are case-sensitive in practice, so don't lowercase them
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
     @property

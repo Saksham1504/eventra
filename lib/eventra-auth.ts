@@ -1,4 +1,4 @@
-import {
+﻿import {
   browserLocalPersistence,
   browserSessionPersistence,
   GoogleAuthProvider,
@@ -9,9 +9,29 @@ import {
   signOut,
   type User,
 } from 'firebase/auth'
-import { loginToEventra, type EventraUser } from '@/lib/eventra-api'
+import { loginToEventra, getMe, type EventraUser } from '@/lib/eventra-api'
 import { getFirebaseAuth } from '@/lib/firebase'
 
+// ─── Dev mock mode ────────────────────────────────────────────────────────────
+// When NEXT_PUBLIC_FIREBASE_API_KEY starts with "dev-" we skip real Firebase
+// and use the backend mock-token auth instead.
+const IS_DEV_MOCK = (process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? '').startsWith('dev-')
+
+function roleFromEmail(email: string): string {
+  if (email.includes('admin')) return 'mock-admin'
+  if (email.includes('organizer') || email.includes('org')) return 'mock-organizer'
+  return 'mock-student1'
+}
+
+async function devSignIn(mockToken: string): Promise<EventraUser> {
+  // Store the token so auth-context picks it up
+  if (typeof window !== 'undefined') {
+    window.__eventra_dev_token = mockToken
+  }
+  return getMe(mockToken)
+}
+
+// ─── Real Firebase helpers ────────────────────────────────────────────────────
 async function finishSignIn(
   user: User,
   auth: ReturnType<typeof getFirebaseAuth>,
@@ -33,6 +53,10 @@ export async function signInWithEventraEmail(
   password: string,
   rememberMe: boolean,
 ): Promise<EventraUser> {
+  if (IS_DEV_MOCK) {
+    const token = roleFromEmail(email)
+    return devSignIn(token)
+  }
   const auth = getFirebaseAuth()
   await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence)
   const credential = await signInWithEmailAndPassword(auth, email, password)
@@ -40,6 +64,9 @@ export async function signInWithEventraEmail(
 }
 
 export async function signInWithEventraGoogle(rememberMe: boolean): Promise<EventraUser> {
+  if (IS_DEV_MOCK) {
+    return devSignIn('mock-student1')
+  }
   const auth = getFirebaseAuth()
   await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence)
   const credential = await signInWithPopup(auth, new GoogleAuthProvider())
@@ -47,6 +74,10 @@ export async function signInWithEventraGoogle(rememberMe: boolean): Promise<Even
 }
 
 export async function sendEventraPasswordReset(email: string): Promise<void> {
+  if (IS_DEV_MOCK) {
+    // Simulate success silently in dev
+    return
+  }
   await sendPasswordResetEmail(getFirebaseAuth(), email)
 }
 
@@ -71,4 +102,11 @@ export function getEventraAuthErrorMessage(error: unknown): string {
   }
 
   return error instanceof Error ? error.message : 'Sign-in failed. Please try again.'
+}
+
+// Allow TypeScript to know about the global
+declare global {
+  interface Window {
+    __eventra_dev_token?: string
+  }
 }

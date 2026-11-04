@@ -7,12 +7,19 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import settings
 
-engine = create_engine(
-    settings.database_url,
-    pool_pre_ping=True,   # drop dead connections instead of erroring
-    pool_recycle=3600,    # MySQL closes idle connections, so refresh hourly
-    future=True,
-)
+_engine_kwargs: dict = {"pool_pre_ping": True, "future": True}
+if settings.database_url.startswith("mysql"):
+    _engine_kwargs.update(
+        pool_recycle=3600,
+        pool_size=10,
+        max_overflow=20,
+        # READ COMMITTED avoids stale snapshots and gap-lock deadlocks in booking transactions
+        isolation_level="READ COMMITTED",
+    )
+else:  # sqlite, used only for local tests
+    _engine_kwargs["connect_args"] = {"check_same_thread": False}
+
+engine = create_engine(settings.database_url, **_engine_kwargs)
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
