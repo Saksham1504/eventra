@@ -19,6 +19,17 @@ A full-stack web application for discovering, booking, and managing campus event
 
 ---
 
+## 🛠️ Tools & Development Assistance
+
+| Tool | Purpose |
+|---|---|
+| Claude | AI-assisted coding and development |
+| Antigravity | AI-powered development environment |
+| v0 by Vercel | UI design and frontend generation |
+| ChatGPT | Brainstorming, architecture, debugging, and development assistance |
+
+---
+
 ## Prerequisites
 
 - **Node.js** 18+ and **pnpm** (`npm install -g pnpm`)
